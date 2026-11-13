@@ -24,6 +24,9 @@ export async function protocolOverWSHandler(request, config, connect) {
 	const [client, webSocket] = Object.values(webSocketPair);
 
 	webSocket.accept();
+	// workerd defaults WebSocket binaryType to 'blob'; VLESS needs ArrayBuffer.
+	// (On the edge it already defaults to ArrayBuffer, so this is a no-op there.)
+	webSocket.binaryType = 'arraybuffer';
 
 	let address = '';
 	let portWithRandomLog = '';

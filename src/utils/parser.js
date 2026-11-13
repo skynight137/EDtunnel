@@ -306,3 +306,29 @@ export function parsePathProxyParams(pathname) {
 
 	return result;
 }
+
+/**
+ * Parses header-based relay parameters.
+ * Header version of the per-request proxy selection: the outbound is chosen
+ * per request via X-Relay-* headers instead of URL parameters, so the URL
+ * stays the target URL (and the cache key) and the outbound never appears
+ * in a shareable/logged URL. Headers override environment variables.
+ * UUID is intentionally never read from a header (environment only).
+ * @param {Request} request - Incoming request
+ * @returns {{proxyip: string|null, socks5: string|null, http: string|null, vless: string|null, globalProxy: boolean}} Parsed parameters
+ */
+export function parseHeaderProxyParams(request) {
+	const headers = request.headers;
+	const result = {
+		proxyip: headers.get('X-Relay-ProxyIP') || null,
+		socks5: headers.get('X-Relay-Socks5') || null,
+		http: headers.get('X-Relay-HTTP') || null,
+		vless: headers.get('X-Relay-Vless') || null,
+		globalProxy: false
+	};
+	const global = headers.get('X-Relay-Global');
+	if (global && (global.toLowerCase() === 'true' || global === '1')) {
+		result.globalProxy = true;
+	}
+	return result;
+}

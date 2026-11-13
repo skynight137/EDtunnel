@@ -54,47 +54,37 @@ A proxy tool based on Cloudflare Workers and Pages, supporting multiple protocol
 | `PROXY_TIMEOUT` | No | `1500` | Proxy connection timeout in ms (default: 1500) |
 | `PROXY_FALLBACK` | No | `true` or `false` | Fallback to direct connection if proxies fail (default: true) |
 
-### URL Query Parameter Configuration
+### Header-Based Relay Configuration
 
-You can use URL query parameters to directly override environment variable configurations. These parameters have higher priority than environment variables. For security reasons, UUID cannot be set via URL query parameters.
+> **Fork note**: this fork replaces EDtunnel's URL-parameter proxy configuration with **headers**. The per-request outbound is chosen via `X-Relay-*` headers, not URL parameters, so the URL stays the target URL (and the cache key) and the outbound never appears in a shareable/logged URL. URL parameters (`?proxyip=`, `?socks5=`, `?http=`, `?vless=`, `?globalproxy`) and path parameters (`/proxyip=`, `/socks5://`, `/http://`, `/vless://`, `/gvless=`) no longer select the outbound.
 
-| Query Parameter | Corresponding ENV | Example | Description |
-|-----------------|-------------------|---------|-------------|
-| `proxyip` | `PROXYIP` | `?proxyip=1.1.1.1:443` | Override proxy IP and port |
-| `socks5` | `SOCKS5` | `?socks5=user:pass@host:port` | Override SOCKS5 proxy configuration |
-| `http` | - | `?http=user:pass@host:port` | HTTP CONNECT proxy configuration |
-| `vless` | `VLESS_OUTBOUND` | `?vless=vless://uuid@host:port` | Override VLESS outbound proxy |
-| `globalproxy` | - | `?globalproxy` | Enable global proxy mode (route all traffic) |
+You can use request headers to directly override environment variable configurations. These headers have higher priority than environment variables. For security reasons, UUID cannot be set via headers.
 
-### Path-Based Proxy Parameters
+| Header | Corresponding ENV | Example | Description |
+|--------|-------------------|---------|-------------|
+| `X-Relay-ProxyIP` | `PROXYIP` | `X-Relay-ProxyIP: 1.1.1.1:443` | Override proxy IP and port |
+| `X-Relay-Socks5` | `SOCKS5` | `X-Relay-Socks5: user:pass@host:port` | Override SOCKS5 proxy configuration |
+| `X-Relay-HTTP` | - | `X-Relay-HTTP: user:pass@host:port` | HTTP CONNECT proxy configuration |
+| `X-Relay-Vless` | `VLESS_OUTBOUND` | `X-Relay-Vless: vless://uuid@host:port` | Override VLESS outbound proxy |
+| `X-Relay-Global` | - | `X-Relay-Global: true` | Enable global proxy mode (route all traffic) |
 
-You can also configure proxies directly in the URL path:
-
-| Path Format | Example | Description |
-|-------------|---------|-------------|
-| `/proxyip=` | `/proxyip=1.1.1.1:443` | Set proxy IP via path |
-| `/socks5://` | `/socks5://user:pass@host:port` | SOCKS5 proxy via path |
-| `/http://` | `/http://user:pass@host:port` | HTTP CONNECT proxy via path |
-| `/vless://` | `/vless://uuid@host:port?...` | VLESS outbound via path |
-| `/gvless=` | `/gvless=base64-encoded-url` | VLESS outbound (global, base64 encoded) |
-
-> **Security Note**: UUID must be set via environment variables or configuration files, not through URL parameters, to prevent unauthorized identity modifications.
+> **Security Note**: UUID must be set via environment variables or configuration files, not through headers, to prevent unauthorized identity modifications.
 
 #### Usage Examples
 
-1. Temporarily change proxy IP:
+1. Route one request through a VLESS relay (e.g. a VLESS server on your own host):
    ```
-   https://your-domain.workers.dev/?proxyip=another-proxy-ip:port
-   ```
-
-2. Combine multiple parameters:
-   ```
-   https://your-domain.workers.dev/?proxyip=1.1.1.1:443&socks5_relay=true
+   curl -H "X-Relay-Vless: vless://<uuid>@<relay-host>:443?type=ws&security=tls&path=/" https://<your-domain>/
    ```
 
-3. Apply to specific paths:
+2. Temporarily change proxy IP:
    ```
-   https://your-domain.workers.dev/sub/your-uuid?proxyip=1.1.1.1:443
+   curl -H "X-Relay-ProxyIP: 1.1.1.1:443" https://<your-domain>/
+   ```
+
+3. Combine multiple headers:
+   ```
+   curl -H "X-Relay-ProxyIP: 1.1.1.1:443" -H "X-Relay-Global: true" https://<your-domain>/
    ```
 
 #### Feature Notes
