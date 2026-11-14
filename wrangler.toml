@@ -10,3 +10,4 @@ UUID = "1b6c1745-992e-4aac-8685-266c090e50ea"
 # TROJAN_PASSWORD = "your-trojan-password"  # Optional: If not set, UUID will be used as password
 # SOCKS5 = "127.0.0.1:1080"
 # SOCKS5_RELAY = "true"
+# BESTIP_URL = "https://bestip.<your-subdomain>.workers.dev"  # Optional: self-hosted bestIP endpoint base URL (default: https://bestip.06151953.xyz)

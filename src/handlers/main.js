@@ -202,8 +202,11 @@ export async function handleRequest(request, env, ctx, connect) {
 					// Forward only a fixed, non-sensitive User-Agent. Never
 					// forward the incoming headers: they may carry X-Relay-*
 					// proxy credentials (and any Cookie/Authorization) to
-					// this third-party host.
-					return fetch(`https://bestip.06151953.xyz/auto?host=${host}&uuid=${matchingUserID}&path=/`, { headers: { 'User-Agent': 'EDtunnel' } });
+					// this third-party host. The endpoint is configurable
+					// via the BESTIP_URL env var (default: the public
+					// bestip.06151953.xyz) so a self-hosted bestIP on a
+					// different machine can be pointed at.
+					return fetch(`${requestConfig.bestipUrl}/auto?host=${host}&uuid=${matchingUserID}&path=/`, { headers: { 'User-Agent': 'EDtunnel' } });
 				}
 			}
 			return handleDefaultPath(url, request);

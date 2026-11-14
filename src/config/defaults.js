@@ -53,6 +53,15 @@ export const defaultEnableProxyFallback = true;
 export const defaultVlessOutbound = '';
 
 /**
+ * Default bestIP endpoint base URL
+ * The /bestip/{uuid} route fetches {BESTIP_URL}/auto?host=...&uuid=...&path=/
+ * from this host. Override with the BESTIP_URL environment variable to point
+ * at a self-hosted bestIP (a different Worker, a VPS, a repl) instead of the
+ * public default.
+ */
+export const defaultBestipUrl = 'https://bestip.06151953.xyz';
+
+/**
  * Creates a request configuration object with default values
  * @param {Object} env - Environment variables
  * @param {string} env.UUID - User ID for authentication
@@ -62,10 +71,11 @@ export const defaultVlessOutbound = '';
  * @param {string} env.PROXY_TIMEOUT - Proxy connection timeout in ms
  * @param {string} env.PROXY_FALLBACK - Enable fallback to direct connection
  * @param {string} env.VLESS_OUTBOUND - VLESS outbound configuration URL
+ * @param {string} env.BESTIP_URL - bestIP endpoint base URL (default: https://bestip.06151953.xyz)
  * @returns {Object} Request configuration
  */
 export function createRequestConfig(env = {}) {
-	const { UUID, SOCKS5, SOCKS5_RELAY, TROJAN_PASSWORD, PROXY_TIMEOUT, PROXY_FALLBACK, VLESS_OUTBOUND } = env;
+	const { UUID, SOCKS5, SOCKS5_RELAY, TROJAN_PASSWORD, PROXY_TIMEOUT, PROXY_FALLBACK, VLESS_OUTBOUND, BESTIP_URL } = env;
 	const userID = UUID || defaultUserID;
 	return {
 		userID: userID,
@@ -82,6 +92,8 @@ export function createRequestConfig(env = {}) {
 		enableProxyFallback: PROXY_FALLBACK !== 'false' && defaultEnableProxyFallback,
 		// VLESS outbound configuration
 		vlessOutbound: VLESS_OUTBOUND || defaultVlessOutbound,
-		parsedVlessOutbound: null
+		parsedVlessOutbound: null,
+		// bestIP endpoint base URL (trailing slash stripped)
+		bestipUrl: (BESTIP_URL || defaultBestipUrl).replace(/\/+$/, '')
 	};
 }

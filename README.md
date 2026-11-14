@@ -52,6 +52,7 @@ A proxy tool based on Cloudflare Workers and Pages, supporting multiple protocol
 | `VLESS_OUTBOUND` | No | `vless://uuid@host:port?type=ws&security=tls` | VLESS outbound proxy URL |
 | `PROXY_TIMEOUT` | No | `1500` | Proxy connection timeout in ms (default: 1500) |
 | `PROXY_FALLBACK` | No | `true` or `false` | Fallback to direct connection if proxies fail (default: true) |
+| `BESTIP_URL` | No | `https://bestip.<your-subdomain>.workers.dev` | bestIP endpoint base URL for `/bestip/{uuid}` (default: `https://bestip.06151953.xyz`) |
 
 ### Header-Based Relay Configuration
 
