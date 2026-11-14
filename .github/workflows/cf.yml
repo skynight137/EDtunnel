@@ -26,6 +26,12 @@ on:
     # TODO: inputs.environment and inputs.commit
     branches:
       - "main"
+      # Multi-worker branches: pushing to a proxyipN branch deploys that
+      # branch as its own Worker. Each branch MUST have a unique `name` in
+      # its wrangler.toml — branches sharing a name deploy to the SAME
+      # Worker and overwrite each other (last push wins). No conflict or
+      # duplication as long as the names are unique.
+      - "proxyip*"
     tags:
       - "v*"
     paths-ignore:

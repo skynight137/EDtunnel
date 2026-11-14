@@ -21,8 +21,7 @@ A proxy tool based on Cloudflare Workers and Pages, supporting multiple protocol
 - **VLESS outbound proxy** with full UDP capability
 - **Multi-proxy rotation** with automatic failover
 - Automatic configuration subscription link
-- URL query parameter configuration override support
-- Path-based proxy parameters (`/socks5://`, `/http://`, `/vless://`)
+- Header-based per-request relay configuration (`X-Relay-*`)
 - Simple and easy deployment process
 
 ## Quick Deployment
@@ -89,16 +88,14 @@ You can use request headers to directly override environment variable configurat
 
 #### Feature Notes
 
-- Priority: URL parameters > Environment Variables > Default Values
+- Priority: Headers (`X-Relay-*`) > Environment Variables > Default Values
 - Temporary: These changes only apply to the current request and do not permanently modify configurations
-- Combinable: Multiple parameters can be combined for complex configuration adjustments
+- Combinable: Multiple headers can be combined for complex configuration adjustments
 - Use cases: Quick testing, temporary configuration switching, dynamic calls from third-party systems
 
-#### URL Format Notes
+#### URL Parameter Notes
 
-- Ensure query parameters use the correct format: `?parameter=value`. The question mark `?` should not be URL encoded (`%3F`).
-- If you see URLs like `/%3Fproxyip=value`, this won't work correctly. Use `/?proxyip=value` instead.
-- This project now supports handling query parameters encoded in the path, but using the standard format is recommended for best compatibility.
+- URL parameters (`?proxyip=`, `?socks5=`, `?http=`, `?vless=`, `?globalproxy`) and path parameters (`/proxyip=`, `/socks5://`, `/http://`, `/vless://`, `/gvless=`) no longer select the outbound in this fork — they are ignored. Use `X-Relay-*` headers instead (see above).
 
 ### Non-443 Port Configuration
 
@@ -183,11 +180,8 @@ EDtunnel now supports Trojan protocol alongside VLESS, with auto-detection:
 As an alternative to SOCKS5, you can use HTTP CONNECT proxy:
 
 ```bash
-# Via URL path
-https://your-domain.workers.dev/http://user:pass@proxy-host:port/sub/uuid
-
-# Via URL parameter
-https://your-domain.workers.dev/?http=user:pass@proxy-host:port
+# Via header (per request)
+curl -H "X-Relay-HTTP: user:pass@proxy-host:port" https://your-domain.workers.dev/
 ```
 
 ### VLESS Outbound Proxy
@@ -198,11 +192,8 @@ Route traffic through an external VLESS server with full UDP support:
 # Environment variable
 VLESS_OUTBOUND=vless://uuid@remote-server:443?type=ws&security=tls&path=/ws
 
-# Via URL path
-https://your-domain.workers.dev/vless://uuid@host:port?type=ws&security=tls/sub/your-uuid
-
-# Via URL parameter
-https://your-domain.workers.dev/?vless=vless://uuid@host:port
+# Via header (per request)
+curl -H "X-Relay-Vless: vless://uuid@host:port?type=ws&security=tls" https://your-domain.workers.dev/
 ```
 
 ### Multiple UUID Support
