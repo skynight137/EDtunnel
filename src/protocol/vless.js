@@ -33,7 +33,9 @@ export function processProtocolHeader(protocolBuffer, userID) {
 	const isValidUser = uuids.some(uuid => slicedBufferString === uuid.trim()) ||
 		(uuids.length === 1 && slicedBufferString === uuids[0].trim());
 
-	console.log(`userID: ${slicedBufferString}`);
+	// Never log slicedBufferString — it is the UUID from the VLESS header
+	// (the auth credential). It was previously written to Worker logs on
+	// every VLESS request, before the validity check below.
 
 	if (!isValidUser) {
 		return { hasError: true, message: 'invalid user' };
