@@ -98,7 +98,9 @@ jobs:
           node-version: "22"
 
       - name: 🏗 Get dependencies
-        run: npm i
+        # wrangler@4 wants @cloudflare/workers-types@^5 but the project pins
+        # ^4 — plain `npm i` fails ERESOLVE; --legacy-peer-deps resolves it.
+        run: npm i --legacy-peer-deps
 
       - name: 📚 Wrangler publish
         # github.com/cloudflare/wrangler-action
