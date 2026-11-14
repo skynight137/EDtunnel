@@ -83,7 +83,7 @@ Environment variables (set in `wrangler.toml` or Cloudflare Dashboard):
 | `SOCKS5` | SOCKS5 proxy (`user:pass@host:port`) |
 | `TROJAN_PASSWORD` | Trojan protocol password (optional, uses UUID if not set) |
 
-URL query parameters can override: `proxyip`, `socks5` (UUID cannot be overridden for security).
+Headers (`X-Relay-*`) can override per request: `X-Relay-ProxyIP`, `X-Relay-Socks5`, `X-Relay-HTTP`, `X-Relay-Vless`, `X-Relay-Global` (UUID cannot be overridden for security — environment only). URL/path parameters (`?proxyip=`, `/socks5://`, etc.) no longer select the outbound; they are ignored.
 
 ## Key Implementation Details
 

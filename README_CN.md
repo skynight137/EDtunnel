@@ -54,61 +54,49 @@
 | `PROXY_TIMEOUT` | 否 | `1500` | 代理连接超时（毫秒，默认：1500） |
 | `PROXY_FALLBACK` | 否 | `true` 或 `false` | 代理失败时回退到直连（默认：true） |
 
-### URL 查询参数配置
+### 基于请求头的代理配置
 
-您可以使用 URL 查询参数直接覆盖环境变量配置，这些参数的优先级高于环境变量。出于安全考虑，UUID 不能通过 URL 查询参数设置。
+> **Fork 说明**：本 fork 将 EDtunnel 的 URL 参数代理配置替换为**请求头**。每次请求的外发代理通过 `X-Relay-*` 请求头选择，而非 URL 参数，因此 URL 保持为目标 URL（也是缓存键），代理信息不会出现在可分享/可记录的 URL 中。URL 参数（`?proxyip=`、`?socks5=`、`?http=`、`?vless=`、`?globalproxy`）和路径参数（`/proxyip=`、`/socks5://`、`/http://`、`/vless://`、`/gvless=`）不再选择外发代理。
 
-| 查询参数 | 对应环境变量 | 示例 | 说明 |
-|----------|--------------|------|------|
-| `proxyip` | `PROXYIP` | `?proxyip=1.1.1.1:443` | 覆盖代理IP和端口 |
-| `socks5` | `SOCKS5` | `?socks5=user:pass@host:port` | 覆盖SOCKS5代理配置 |
-| `http` | - | `?http=user:pass@host:port` | HTTP CONNECT代理配置 |
-| `vless` | `VLESS_OUTBOUND` | `?vless=vless://uuid@host:port` | 覆盖VLESS出站代理 |
-| `globalproxy` | - | `?globalproxy` | 启用全局代理模式（转发所有流量） |
+您可以使用请求头直接覆盖环境变量配置，这些请求头的优先级高于环境变量。出于安全考虑，UUID 不能通过请求头设置。
 
-> **安全说明**：UUID 必须通过环境变量或配置文件设置，不能通过 URL 参数设置，以防止未授权修改用户身份。
+| 请求头 | 对应环境变量 | 示例 | 说明 |
+|--------|--------------|------|------|
+| `X-Relay-ProxyIP` | `PROXYIP` | `X-Relay-ProxyIP: 1.1.1.1:443` | 覆盖代理IP和端口 |
+| `X-Relay-Socks5` | `SOCKS5` | `X-Relay-Socks5: user:pass@host:port` | 覆盖SOCKS5代理配置 |
+| `X-Relay-HTTP` | - | `X-Relay-HTTP: user:pass@host:port` | HTTP CONNECT代理配置 |
+| `X-Relay-Vless` | `VLESS_OUTBOUND` | `X-Relay-Vless: vless://uuid@host:port` | 覆盖VLESS出站代理 |
+| `X-Relay-Global` | - | `X-Relay-Global: true` | 启用全局代理模式（转发所有流量） |
 
-### 路径参数配置
-
-您也可以通过 URL 路径配置代理：
-
-| 路径格式 | 示例 | 说明 |
-|----------|------|------|
-| `/proxyip=` | `/proxyip=1.1.1.1:443` | 通过路径设置代理IP |
-| `/socks5://` | `/socks5://user:pass@host:port` | 通过路径设置SOCKS5代理 |
-| `/http://` | `/http://user:pass@host:port` | 通过路径设置HTTP CONNECT代理 |
-| `/vless://` | `/vless://uuid@host:port?...` | 通过路径设置VLESS出站代理 |
-| `/gvless=` | `/gvless=base64编码的URL` | VLESS出站代理（全局模式，base64编码） |
+> **安全说明**：UUID 必须通过环境变量或配置文件设置，不能通过请求头设置，以防止未授权修改用户身份。
 
 #### 使用示例
 
-1. 临时更改代理IP：
-   ```text
-   https://your-domain.workers.dev/?proxyip=another-proxy-ip:port
+1. 通过 VLESS 中继转发一次请求（例如您自己主机上的 VLESS 服务器）：
+   ```
+   curl -H "X-Relay-Vless: vless://<uuid>@<relay-host>:443?type=ws&security=tls&path=/" https://<your-domain>/
    ```
 
-2. 组合多个参数：
-   ```text
-   https://your-domain.workers.dev/?proxyip=1.1.1.1:443&socks5_relay=true
+2. 临时更改代理IP：
+   ```
+   curl -H "X-Relay-ProxyIP: 1.1.1.1:443" https://<your-domain>/
    ```
 
-3. 应用于特定路径：
-   ```text
-   https://your-domain.workers.dev/sub/your-uuid?proxyip=1.1.1.1:443
+3. 组合多个请求头：
+   ```
+   curl -H "X-Relay-ProxyIP: 1.1.1.1:443" -H "X-Relay-Global: true" https://<your-domain>/
    ```
 
 #### 特性说明
 
-- 优先级：URL参数 > 环境变量 > 默认值
+- 优先级：请求头（`X-Relay-*`）> 环境变量 > 默认值
 - 临时性：这些更改仅对当前请求有效，不会永久修改配置
-- 可组合：可以组合多个参数实现复杂配置调整
+- 可组合：可以组合多个请求头实现复杂配置调整
 - 适用场景：快速测试、临时切换配置、第三方系统动态调用
 
-#### URL 格式注意事项
+#### URL 参数说明
 
-- 确保查询参数使用正确的格式：`?参数名=值`。问号 `?` 不应被URL编码（`%3F`）。
-- 如果您看到像 `/%3Fproxyip=value` 这样的URL，这不会正确工作，应改为 `/?proxyip=value`。
-- 本项目现已支持处理编码在路径中的查询参数，但建议使用标准格式以确保最佳兼容性。
+- URL 参数（`?proxyip=`、`?socks5=`、`?http=`、`?vless=`、`?globalproxy`）和路径参数（`/proxyip=`、`/socks5://`、`/http://`、`/vless://`、`/gvless=`）在本 fork 中不再选择外发代理——它们会被忽略。请改用 `X-Relay-*` 请求头（见上文）。
 
 ### 非443端口配置
 

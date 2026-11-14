@@ -89,7 +89,7 @@ export async function handleRequest(request, env, ctx, connect) {
 				if (parsed) {
 					requestConfig.parsedVlessOutbound = parsed;
 					requestConfig.proxyType = 'vless';
-					// Use globalProxy flag from path/query params (e.g., /gvless=, /vless://, ?globalproxy)
+					// Use globalProxy flag from the X-Relay-Global header
 					console.log('VLESS outbound configured:', parsed.address, parsed.port);
 				}
 			} catch (err) {
