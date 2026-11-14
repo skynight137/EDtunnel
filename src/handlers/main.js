@@ -27,6 +27,12 @@ if (!isValidUUID(defaultUserID)) {
 export async function handleRequest(request, env, ctx, connect) {
 	try {
 		const { UUID, PROXYIP, SOCKS5, SOCKS5_RELAY, TROJAN_PASSWORD } = env;
+		// Fail closed: never fall back to the public default UUID (it is in
+		// this repo, so anyone can look it up). A Worker without UUID set
+		// must not serve traffic.
+		if (!UUID) {
+			throw new Error('UUID environment variable is required');
+		}
 		const url = new URL(request.url);
 
 		// Create request-specific configuration
@@ -49,7 +55,9 @@ export async function handleRequest(request, env, ctx, connect) {
 			const proxyAddresses = headerPROXYIP.split(',').map(addr => addr.trim());
 			const isValid = proxyAddresses.every(addr => proxyPattern.test(addr));
 			if (!isValid) {
-				console.warn('Invalid proxyip format:', headerPROXYIP);
+				// Do not log the raw header value (log injection; it may
+				// also carry credentials in the socks5 case).
+				console.warn('Invalid X-Relay-ProxyIP format; ignoring header');
 				headerPROXYIP = null;
 			}
 		}
@@ -60,8 +68,23 @@ export async function handleRequest(request, env, ctx, connect) {
 			const socks5Addresses = headerSOCKS5.split(',').map(addr => addr.trim());
 			const isValid = socks5Addresses.every(addr => socks5Pattern.test(addr));
 			if (!isValid) {
-				console.warn('Invalid socks5 format:', headerSOCKS5);
+				// Do not log the raw header value (log injection; it may
+				// carry proxy credentials).
+				console.warn('Invalid X-Relay-Socks5 format; ignoring header');
 				headerSOCKS5 = null;
+			}
+		}
+
+		// Validate HTTP proxy format (same shape as SOCKS5: [user:pass@]host:port)
+		if (headerHTTP) {
+			const httpPattern = /^(([^:@]+:[^:@]+@)?[a-zA-Z0-9][-a-zA-Z0-9.]*(\.[a-zA-Z0-9][-a-zA-Z0-9.]*)+|\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}):\d{1,5}$/;
+			const httpAddresses = headerHTTP.split(',').map(addr => addr.trim());
+			const isValid = httpAddresses.every(addr => httpPattern.test(addr));
+			if (!isValid) {
+				// Do not log the raw header value (log injection; it may
+				// carry proxy credentials).
+				console.warn('Invalid X-Relay-HTTP format; ignoring header');
+				headerHTTP = null;
 			}
 		}
 
@@ -69,8 +92,10 @@ export async function handleRequest(request, env, ctx, connect) {
 		requestConfig.socks5Address = headerSOCKS5 || requestConfig.socks5Address;
 		requestConfig.globalProxy = enableGlobalProxy || requestConfig.socks5Relay;
 
-		// Log parameters for debugging
-		console.log('Config params:', requestConfig.userID, requestConfig.socks5Address, requestConfig.globalProxy, headerPROXYIP);
+		// Log only non-sensitive flags. Never log userID (the UUID) or
+		// socks5Address (it may contain proxy user:pass) — both are
+		// credentials and must not appear in Worker logs.
+		console.log('Config params:', { globalProxy: requestConfig.globalProxy, hasProxy: !!headerPROXYIP, hasSocks5: !!requestConfig.socks5Address });
 
 		// Handle proxy configuration
 		const proxyConfig = handleProxyConfig(headerPROXYIP || PROXYIP);
@@ -174,7 +199,11 @@ export async function handleRequest(request, env, ctx, connect) {
 						headers: { "Content-Type": "text/plain;charset=utf-8" },
 					});
 				} else if (url.pathname === `/bestip/${matchingUserID}`) {
-					return fetch(`https://bestip.06151953.xyz/auto?host=${host}&uuid=${matchingUserID}&path=/`, { headers: request.headers });
+					// Forward only a fixed, non-sensitive User-Agent. Never
+					// forward the incoming headers: they may carry X-Relay-*
+					// proxy credentials (and any Cookie/Authorization) to
+					// this third-party host.
+					return fetch(`https://bestip.06151953.xyz/auto?host=${host}&uuid=${matchingUserID}&path=/`, { headers: { 'User-Agent': 'EDtunnel' } });
 				}
 			}
 			return handleDefaultPath(url, request);
